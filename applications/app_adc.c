@@ -35,6 +35,9 @@
 #define FILTER_SAMPLES					5
 #define RPM_FILTER_SAMPLES				8
 
+#define BRAKE_RPM_MIN				    2500
+#define BRAKE_RPM_DERATE_WINDOW			3000
+
 // Threads
 static THD_FUNCTION(adc_thread, arg);
 static THD_WORKING_AREA(adc_thread_wa, 1024);
@@ -279,6 +282,14 @@ static THD_FUNCTION(adc_thread, arg) {
 		// Apply throttle curve
 		pwr = utils_throttle_curve(pwr, config.throttle_exp, config.throttle_exp_brake, config.throttle_exp_mode);
 
+		// Apply RPM-based ramping for breaking
+		const float rpm_now = mc_interface_get_rpm();
+		if (config.ctrl_type == ADC_CTRL_TYPE_CURRENT_NOREV_BRAKE_CENTER && pwr<0){
+			float rpm_scalar = (rpm_now-BRAKE_RPM_MIN)/BRAKE_RPM_DERATE_WINDOW;
+			utils_truncate_number(&rpm_scalar, 0, 1);
+			pwr = rpm_scalar * pwr;
+		}
+
 		// Apply ramping
 		static systime_t last_time = 0;
 		static float pwr_ramp = 0.0;
@@ -295,7 +306,6 @@ static THD_FUNCTION(adc_thread, arg) {
 		bool current_mode = false;
 		bool current_mode_brake = false;
 		const volatile mc_configuration *mcconf = mc_interface_get_configuration();
-		const float rpm_now = mc_interface_get_rpm();
 		bool send_duty = false;
 
 		// Use the filtered and mapped voltage for control according to the configuration.

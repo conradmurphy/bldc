@@ -18,6 +18,7 @@
     */
 
 #include "conf_general.h"
+#include "comm_can.h"
 
 #ifdef APP_CUSTOM_TO_USE
 #include APP_CUSTOM_TO_USE

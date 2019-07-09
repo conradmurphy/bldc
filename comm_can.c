@@ -385,6 +385,26 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 #endif
 }
 
+void comm_can_transmit_sid_rtr(uint32_t id) {
+
+#if CAN_ENABLE
+	CANTxFrame txmsg;
+	txmsg.IDE = CAN_IDE_STD;
+	txmsg.SID = id;
+	txmsg.RTR = CAN_RTR_REMOTE;
+	txmsg.DLC = 0;
+
+	chMtxLock(&can_mtx);
+	canTransmit(&CANDx, CAN_ANY_MAILBOX, &txmsg, MS2ST(20));
+	chMtxUnlock(&can_mtx);
+
+#else
+	(void)id;
+	(void)data;
+	(void)len;
+#endif
+}
+
 /**
  * Set function to be called when standard CAN frames are received.
  *
